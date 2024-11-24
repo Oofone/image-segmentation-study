@@ -10,3 +10,7 @@ pip install pytorch-lightning==2.3.1
 pip install ipython
 pip install matplotlib
 pip install fire
+pip install ray
+pip install "ray[tune]"
+pip install transformers
+pip install peft

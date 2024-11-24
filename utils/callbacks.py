@@ -1,8 +1,10 @@
 from utils.image_utils import t2im
 
 from pytorch_lightning import Callback, Trainer, LightningModule
-from typing import Any, Dict
+from typing import Any, Dict, List
+from PIL.Image import Image
 from torch import Tensor
+
 from os.path import join as path_join
 from os import makedirs
 
@@ -10,19 +12,20 @@ import re
 
 
 # Class to save predicted images after predict step.
-class SaveFeatures(Callback):
-    def __init__(self, save_dir: str) -> None:
+class SavePredictedMasks(Callback):
+    def __init__(self, save_dir: str, CMAP: List[int]) -> None:
         super().__init__()
         
         self.save_dir = save_dir
+        self.CMAP = CMAP
         makedirs(self.save_dir, exist_ok=True)
 
     def on_predict_batch_end(self, trainer: Trainer, pl_module: LightningModule, outputs: Any,
                              batch: Dict[str, Tensor], batch_idx: int, dataloader_idx: int = 0) -> None:
 
         for name, mask_tensor in zip(batch['names'], outputs):
-            save_path = path_join(self.save_dir, name)
-            pil_mask = t2im(mask_tensor)
+            save_path = path_join(self.save_dir, f"{name}.png")
+            pil_mask: Image = t2im(mask_tensor, CMAP=self.CMAP)
             pil_mask.save(save_path)
 
 

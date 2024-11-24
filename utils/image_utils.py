@@ -24,5 +24,5 @@ def ar2im(image_arr: np.array, CMAP: Optional[List[int]]) -> Image.Image:
     return img
 
 
-def t2im(image_tensor: Tensor, CMAP: Optional[List[int]]) -> Image.Image:
-    return ar2im(image_arr=image_tensor.numpy(), CMAP=CMAP)
+def t2im(image_tensor: Tensor, CMAP: Optional[List[int]] = None) -> Image.Image:
+    return ar2im(image_arr=image_tensor.cpu().numpy().astype(np.uint8), CMAP=CMAP)

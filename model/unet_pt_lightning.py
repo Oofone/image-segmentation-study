@@ -1,19 +1,20 @@
-from model.conv_blocks import ConvDownsamplingBlock
-from model.encoder import UnetEncoder
-from model.decoder import UnetDecoder
+from model.conv.conv_blocks import ConvDownsamplingBlock
+from model.unet.encoder import UnetEncoder
+from model.unet.decoder import UnetDecoder
 
 from torchmetrics import JaccardIndex, Dice, F1Score, Accuracy
 from typing import Union, Tuple, Dict, List, Any, Optional
 from pytorch_lightning import LightningModule
 from torch import nn, Tensor, optim, argmax
 
+import torch.nn.functional as F
 
 # Unet model for image segmentation 
 class UnetPtLightning(LightningModule):
 
     def __init__(self, input_channels: int, starting_channel: int, depth: int, n_class: int, downsampling_factor: int,
                  train_batch_size: int, val_batch_size: int, test_batch_size: int, kernel_size: int, stride: int,
-                 padding: Union[int, Tuple[input]], loss_fn: nn.Module, distributed: bool = False,
+                 padding: Union[int, Tuple[input]], loss_fn: nn.Module, distributed: bool = False, infer_resolution: int = 512,
                  initial_learning_rate: float = 1e-4, weight_decay: float = 1e-2, **kwargs):
         super().__init__()
 
@@ -24,9 +25,10 @@ class UnetPtLightning(LightningModule):
         self.train_batch_size = train_batch_size
         self.val_batch_size = val_batch_size
         self.test_batch_size = test_batch_size
-        self.save_hyperparameters()
+        self.infer_resolution = infer_resolution
+        self.save_hyperparameters(ignore=['loss_fn'])
 
-        self.experiment_dir = f"unet-schannel_{starting_channel}-depth_{depth}-kernel_{kernel_size}-lr_{initial_learning_rate}-dwseperable_{kwargs.get('depthwise_pointwise', False)}"
+        self.experiment_dir = f"unet-schannel_{starting_channel}-depth_{depth}-kernel_{kernel_size}-lr_{initial_learning_rate:.3f}-dwseperable_{kwargs.get('depthwise_pointwise', False)}"
 
         # nn.Module parts
         self.distributed = distributed
@@ -99,6 +101,12 @@ class UnetPtLightning(LightningModule):
         del batch
         self.log("val_loss", val_loss, on_step=True, on_epoch=True, prog_bar=True,
                  sync_dist=self.distributed, batch_size=self.val_batch_size)
+
+        # B x sm(C) x H x W
+        Y_cap = F.softmax(Y_cap, dim=1)
+        # B x H x W
+        Y_cap = argmax(Y_cap, dim=1)
+
         self.accuracy.update(Y_cap, Y)
         self.mIoU.update(Y_cap, Y)
         self.dice.update(Y_cap, Y)
@@ -133,7 +141,7 @@ class UnetPtLightning(LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=self.trainer.estimated_stepping_batches, eta_min=1e-5),
-                "monitor": "val_loss"
+                "monitor": "mIoU"
             }
         }
 

@@ -1,4 +1,4 @@
-from model.conv_layers import Conv2d
+from model.conv.conv_layers import Conv2d
 
 from typing import Union, Tuple
 from torch import nn, cat as t_cat, Tensor

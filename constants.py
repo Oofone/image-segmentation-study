@@ -5,6 +5,8 @@ from enum import Enum
 
 CHECKPOINT_PATH = "ckpt"
 DEFAULT_LOGS_FILE = "logs.out"
+INFERENCE_LOGS_FILE = "infer.out"
+PREDICTIONS_DIR = "inference_out"
 
 BINARY_MODE = "BINARY_MODE"
 MULTICLASS_MODE = "MULTICLASS_MODE"
